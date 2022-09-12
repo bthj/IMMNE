@@ -4,6 +4,8 @@ from gym.utils.renderer import Renderer
 import pygame
 import numpy as np
 
+# based on https://www.gymlibrary.dev/content/environment_creation/
+
 class NoteWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array", "single_rgb_array"], "render_fps": 4}
 
@@ -21,7 +23,7 @@ class NoteWorldEnv(gym.Env):
             }
         )
 
-        # We have 4 actions, corresponding to "right", "left"
+        # We have 2 actions, corresponding to "right", "left"
         # TODO value for jump size, instead of just one step at a time?
         self.action_space = spaces.Discrete(2)
 
@@ -35,9 +37,7 @@ class NoteWorldEnv(gym.Env):
             1: np.array([-1]),
         }
 
-        assert render_mode is None or render_mode in self.metadata["render_modes"]
-        self.render_mode = render_mode
-        self._renderer = Renderer(self.render_mode, self._render_frame)
+        self.set_render_mode(render_mode)
 
         """
         If human-rendering is used, `self.window` will be a reference
@@ -58,6 +58,11 @@ class NoteWorldEnv(gym.Env):
                 self._agent_location - self._target_location, ord=1
             )
         }
+
+    def set_render_mode(self, render_mode=None):
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
+        self._renderer = Renderer(self.render_mode, self._render_frame)
 
     def reset(self, seed=None, return_info=False, options=None):
         # We need the following line to seed self.np_random

@@ -3,10 +3,10 @@ import numpy as np
 import random
 import note_exploration
 
-# create Taxi environment
+# create note exploration environment
 env = gym.make('note_exploration/NoteWorld-v0', render_mode="human")
 
-# create a new instance of taxi, and get the initial state
+# create a new instance of note explorer, and get the initial state
 state = env.reset()
 
 num_steps = 99
