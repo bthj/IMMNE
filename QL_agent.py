@@ -2,9 +2,19 @@ import gym
 import numpy as np
 import random
 import note_exploration
+from midi_tm import *
 
 # create note exploration environment
 env = gym.make('note_exploration/NoteWorld-v0')
+
+# functions to import notes from midi files
+#path = 'midi'
+#parsed_midi = parse_midi_files(path)
+#long_list = get_notes_list(parsed_midi)
+
+# clean data and make transition matrix
+#long_list = notes_cleaning(long_list)
+#t_matrix, ui = transition_matrix(long_list)
 
 # initialize q-table
 state_size = env.size
