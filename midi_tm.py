@@ -59,7 +59,7 @@ def get_notes(parsed_midi):
 
 
 def unique(list):
-    ''' Returns a list of the unique items in the input list '''
+    ''' Returns a sorted list of the unique items in the input list '''
 
     # initialize a null list
     unique_items = []
@@ -70,15 +70,16 @@ def unique(list):
         if str(x) not in unique_items:
             unique_items.append(str(x))
     
-    return unique_items
-    
+    return sorted(unique_items)
+
+
 def transition_matrix(long_list):
     ''' Creates a transition matrix to predict the probability of one state following another.
         The unique states are identified in the unique_items list, which decides the size of
         the transition matrix. The transition matrix is square with dim = len(unique_items).
         
         Each row X in the matrix contains the probabilities of different states following the
-        state at position X in unique_list:
+        state at position X in unique_list. Each row sums to 1.0:
 
             E       A       G       D
         E   0.2     0.3     0.0     0.5
@@ -92,7 +93,8 @@ def transition_matrix(long_list):
 
     # identify unique items in long list
     unique_items = unique(long_list)
-        
+    unique_items_freq = [0]*len(unique_items)
+    
     # init transition matrix
     t_matrix = np.zeros([len(unique_items), len(unique_items)])
 
@@ -102,6 +104,11 @@ def transition_matrix(long_list):
         i = unique_items.index(str(long_list[pos]))
         j = unique_items.index(str(long_list[pos+1]))
         t_matrix[i][j] += 1
+        unique_items_freq[i] += 1
+    
+    # count the last item of long_list in freq
+    i = unique_items.index(str(long_list[-1]))
+    unique_items_freq[i] += 1
     
     # normalise per row
     for row in t_matrix:
@@ -109,14 +116,15 @@ def transition_matrix(long_list):
         
     print(f'Done. Found {len(unique_items)} unique items.')
 
-    return t_matrix, unique_items
+    return t_matrix, unique_items, unique_items_freq
 
 
 def notes_cleaning(flat_notes):
     ''' 
-    All notes from the midis look like this: D#4, D4, D-4 etc. This function
-    changes all notes with strlen=2 to have strlen=3 by inserting a '-': D4 to D-4.
-    Could also compress to 12-note scale?
+    Notes from the midis look like this: D#4, D4, D-4 etc. where D4 and D-4 are
+    duplicates. This function changes all notes with strlen=2 to have strlen=3
+    by inserting a '-': D4 becomes D-4. 
+    NB! Inplace, so replaces old input array.
     '''
 
     for c, item in enumerate(flat_notes):
@@ -126,17 +134,45 @@ def notes_cleaning(flat_notes):
     return flat_notes
 
 
-def parse_midi_files(path):
-    ''' Parses all midi files found at path. Returns a list of midi structures '''
+def notes_compress12(flat_notes):
+    ''' Removes everything but the note and a possible # after the note:
+        D#4 becomes D#, D-4 becomes D. Returns a new array. If used,
+        can replace notes_cleaning().
+    '''
 
-    file_list = os.listdir(path)
+    flat_notes12 = [0]*len(flat_notes)
+
+    for c, item in enumerate(flat_notes):
+        if len(item) >= 2:
+            if item[1] == '#':
+                flat_notes12[c] = item[0:2]
+            else:
+                flat_notes12[c] = item[0:1]
+    
+    return flat_notes12
+
+
+def parse_midi_files(path):
+    ''' Parses all midi files found at path, including subfolders.
+        Returns a list of midi structures.
+    '''
+
+    files_list = []
+    for (root,dirs,files) in os.walk(path, topdown=True):
+        for file in files:
+            if file[-4:] == '.mid':
+                files_list.append(os.path.join(root, file))
+
+    print(f'Found {len(files_list)} .mid files')
 
     parsed_midi = []
-    print('Parsing files')
-    for file in file_list:
-        parsed_midi.append(converter.parse(path + '/' + file))
+    print('Parsing files', end='')
+    for file in files_list:
+        parsed_midi.append(converter.parse(file))
         print('.', end='')
     
+    print('')
+
     return parsed_midi
 
 
@@ -150,10 +186,3 @@ def get_notes_list(parsed_midi):
         long_list += flat_notes
     
     return long_list
-
-path = 'midi'
-parsed_midi = parse_midi_files(path)
-
-long_list = get_notes_list(parsed_midi)
-long_list = notes_cleaning(long_list)
-t_matrix, ui = transition_matrix(long_list)

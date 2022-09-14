@@ -14,7 +14,11 @@ env = gym.make('note_exploration/NoteWorld-v0')
 
 # clean data and make transition matrix
 #long_list = notes_cleaning(long_list)
-#t_matrix, ui = transition_matrix(long_list)
+#t_matrix, ui, ui_freq = transition_matrix(long_list)
+
+# alternatively, compress notes to 12-note scale
+#long_list_12 = notes_compress12(long_list)
+#t_matrix_12, ui_12, ui_freq_12 = transition_matrix(long_list_12)
 
 # initialize q-table
 state_size = env.size
