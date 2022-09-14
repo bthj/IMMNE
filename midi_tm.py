@@ -18,7 +18,7 @@ def get_notes(parsed_midi):
     flat_notes = []
     chords = []
 
-    print("Partitioning %s" % parsed_midi)
+    #print("Partitioning %s" % parsed_midi)
 
     notes_to_parse = []
 
@@ -27,7 +27,7 @@ def get_notes(parsed_midi):
         for i in range(len(s2)):
             notes_to_parse.append(s2.parts[i].recurse())
     except: # file has notes in a flat structure
-        print(f'Flat structure detected in {parsed_midi}')
+        #print(f'Flat structure detected in {parsed_midi}')
         notes_to_parse.append(parsed_midi.flat.notes)
     
     # time to init the arrays to hold the actual notes
@@ -93,7 +93,7 @@ def transition_matrix(long_list):
 
     # identify unique items in long list
     unique_items = unique(long_list)
-    unique_items_freq = [0]*len(unique_items)
+    unique_items_freq = np.zeros([len(unique_items)])
     
     # init transition matrix
     t_matrix = np.zeros([len(unique_items), len(unique_items)])
@@ -109,8 +109,10 @@ def transition_matrix(long_list):
     # count the last item of long_list in freq
     i = unique_items.index(str(long_list[-1]))
     unique_items_freq[i] += 1
+    #normalise (convert to frequency)
+    unique_items_freq /= np.sum(unique_items_freq)
     
-    # normalise per row
+    # normalise transition matrix per row (convert to probability)
     for row in t_matrix:
         row /= np.sum(row)
         
@@ -152,8 +154,8 @@ def notes_compress12(flat_notes):
     return flat_notes12
 
 
-def parse_midi_files(path):
-    ''' Parses all midi files found at path, including subfolders.
+def parse_midi_files(path, max=100):
+    ''' Parses the first (#max) midi files found at path, including subfolders.
         Returns a list of midi structures.
     '''
 
@@ -166,10 +168,15 @@ def parse_midi_files(path):
     print(f'Found {len(files_list)} .mid files')
 
     parsed_midi = []
-    print('Parsing files', end='')
-    for file in files_list:
+    print(f'Parsing {min(len(files_list), max)} files', end='')
+    
+    for c, file in enumerate(files_list[:min(len(files_list), max)]):
         parsed_midi.append(converter.parse(file))
-        print('.', end='')
+        if (c % 10 == 0):
+            print(c, end='')
+        elif (c % 5 == 0):
+            print('.', end='')
+        
     
     print('')
 
