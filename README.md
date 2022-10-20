@@ -13,3 +13,8 @@ Run a random agent:
 ```
 python random_agent.py
 ```
+
+Run QL agent:
+```
+python QL_agent.py
+```
