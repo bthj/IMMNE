@@ -41,7 +41,7 @@ max_steps = 99 # per episode
 for episode in range(num_episodes):
 
     # reset the environment
-    state = env.reset()['agent'][0] # TODO hack!
+    state = env.reset()['note'][0] # TODO hack!
     done = False
 
     for s in range(max_steps):
@@ -52,12 +52,13 @@ for episode in range(num_episodes):
             action = env.action_space.sample()
         else:
             # exploit
-            action = np.argmax(qtable[state,:])
+            action = np.argmax(qtable[state,:]) - 12
 
         # take action and observe reward
         new_state, reward, done, info = env.step(action)
 
-        new_state = new_state['agent'][0] # TODO another hack!
+        new_state = new_state['note'][0] # TODO another hack!
+        print(new_state)
 
         # Q-learning algorithm
         qtable[state,action] = qtable[state,action] + learning_rate * (reward + discount_rate * np.max(qtable[new_state,:])-qtable[state,action])
@@ -91,6 +92,7 @@ for s in range(max_steps):
     print("Step {}".format(s+1))
 
     action = np.argmax(qtable[state,:])
+    print(action)
     new_state, reward, done, info = env.step(action)
     rewards += reward
     env.render()
