@@ -482,11 +482,11 @@ def get_notes_music21(parsed_midi):
 
         # should add: if instrument.name is in [Strings, Guitars] or similar?
         for element in instrument:
-            if isinstance(element, note.Note):
+            if isinstance(element, music21.note.Note):
                 notes_row.append(element)
                 flat_notes_row.append(str(element.pitch))
         
-            elif isinstance(element, chord.Chord):
+            elif isinstance(element, music21.chord.Chord):
                 chords_row.append(element)
                 #notes.append('.'.join(str(n) for n in element.normalOrder)) not extracting notes
 
