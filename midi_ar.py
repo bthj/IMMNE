@@ -188,9 +188,9 @@ def get_Dirichlet_KL_and_update(prev_state, new_state, cur_har):
     beta = np.copy(cur_har[prev_state])
 
     # Long computation, split into parts
-    A = gammaln(np.sum(beta)) – gammaln(np.sum(alpha))
+    A = gammaln(np.sum(beta)) - gammaln(np.sum(alpha))
     B = np.sum(gammaln(alpha)) - np.sum(gammaln(beta))
-    C = (beta – alpha) * (digamma(beta) – digamma(np.sum(beta)))
+    C = (beta - alpha) * (digamma(beta) - digamma(np.sum(beta)))
 
     return A + B + C
 
