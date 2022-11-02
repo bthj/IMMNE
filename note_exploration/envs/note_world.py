@@ -30,7 +30,6 @@ class NoteWorldEnv(gym.Env):
     def __init__(
             self, render_mode=None,
             reward_mode="extrinsic",
-            oscillation_freq_damping=10, # higher value = lower frequency
             exp_decay_const=1,
             size=12 # 12 notes in an octave
     ):
@@ -66,7 +65,6 @@ class NoteWorldEnv(gym.Env):
         assert reward_mode in self.metadata["reward_modes"]
         self.reward_mode = reward_mode
 
-        self.oscillation_freq_damping = oscillation_freq_damping
         self.exp_decay_const = exp_decay_const
 
         self.set_render_mode(render_mode)
@@ -155,14 +153,7 @@ class NoteWorldEnv(gym.Env):
             case "intrinsic": # calculate reward from intrinsic motivation
                 reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
             case "oscillate":
-                extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
-                intrinsic_reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
-
-                cycle_pos = abs(math.sin(self.step_iteration / self.oscillation_freq_damping))
-                extrinsic_part = 1 - cycle_pos
-                intrinsic_part = cycle_pos
-
-                reward = (extrinsic_reward*extrinsic_part) + (intrinsic_reward*intrinsic_part)
+                reward = extrinsic_reward * Math.cos(self.step_iteration)**2 + intrinsic_reward * Math.sin(self.step_iteration)**2
                 print("oscillating reward", reward)
             case "extr_to_intr_exp_decay":
                 extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
