@@ -191,7 +191,7 @@ class NoteWorldEnv(gym.Env):
         R = self.extrinsic_matrix
         rcur = R[note_location_before_action, note_location_after_action]
         rden = R[note_location_before_action]
-        reward = (rcur+1e-5) / (rden+1e-5).sum(1)[:,None]
+        reward = (rcur+1e-5) / (rden+1e-5).sum()
 
         '''Not sure exactly what is going on here...?'''
         # likeliest_action = np.argmax(self.extrinsic_probability_matrix[note_location_before_action,:])
