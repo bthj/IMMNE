@@ -146,9 +146,10 @@ def get_Beta_entropy_and_update(prev_state, new_state, cur_har):
     '''
     from scipy.stats import beta as betadist
 
+    # Fix error with Beta entropy
     alpha = np.copy(cur_har[prev_state])
-    a = alpha[prev_state, new_state]
-    b = np.sum(alpha[prev_state]) - a
+    a = alpha[new_state]
+    b = np.sum(alpha) - a
 
     return betadist.entropy(a, b)
 
@@ -192,24 +193,22 @@ def get_Dirichlet_KL_and_update(prev_state, new_state, cur_har):
     B = np.sum(gammaln(alpha)) - np.sum(gammaln(beta))
     C = (beta - alpha) * (digamma(beta) - digamma(np.sum(beta)))
 
-    return A + B + C
+    # Return scalar instead of array
+    return (A + B + C).sum()
 
 # returns:
 # -- 1-step transition matrix as an autoregressive model
 # -- transition probabilities
 # -- entropy
 def get_note_transition_matrix_prob_and_entropy():
-    '''
-    NOTE: Left this unchanged, to not break existing code.
-    '''
     song_dicts = get_song_dicts()
 
     ar = np.zeros((128, 128))
     for dct in song_dicts.values():
         tmpar = get_AR(dct)
-        ar += tmpar / tmpar.sum()**.5
+        ar += tmpar
 
-    par = (ar+1e-5) / (ar+1e-5).sum(1)[:,None]
-    har = -par * np.log2(par)
+    # Using fresh intrinsic matrix, ignore par
+    har = init_intrinsic_matrix()
 
-    return ar, par, har
+    return ar, har

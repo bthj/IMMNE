@@ -57,11 +57,10 @@ class NoteWorldEnv(gym.Env):
         # "ar" is the transition matrix as an autoregressive model
         # "par" contains transition probabilities
         # "har" represents entropy
-        ar, par, har = get_note_transition_matrix_prob_and_entropy()
+        ar, har = get_note_transition_matrix_prob_and_entropy()
 
-        self.extrinsic_transition_matrix = ar
-        self.extrinsic_probability_matrix = par
-        self.entropy_matrix = har
+        self.extrinsic_matrix = ar
+        self.intrinsic_matrix = har
 
 
         assert reward_mode in self.metadata["reward_modes"]
@@ -189,19 +188,26 @@ class NoteWorldEnv(gym.Env):
         return observation, reward, done, info
 
     def get_extrinsic_reward(self, note_location_before_action, note_location_after_action):
-        likeliest_action = np.argmax(self.extrinsic_probability_matrix[note_location_before_action,:])
-        highest_prob = self.extrinsic_probability_matrix[note_location_before_action][likeliest_action]
-        action_prob = self.extrinsic_probability_matrix[note_location_before_action][note_location_after_action]
-        reward = action_prob / highest_prob
+        R = self.extrinsic_matrix
+        rcur = R[note_location_before_action, note_location_after_action]
+        rden = R[note_location_before_action]
+        reward = (rcur+1e-5) / (rden+1e-5).sum(1)[:,None]
+
+        '''Not sure exactly what is going on here...?'''
+        # likeliest_action = np.argmax(self.extrinsic_probability_matrix[note_location_before_action,:])
+        # highest_prob = self.extrinsic_probability_matrix[note_location_before_action][likeliest_action]
+        # action_prob = self.extrinsic_probability_matrix[note_location_before_action][note_location_after_action]
+        # reward = action_prob / highest_prob
         print("extrinsic reward", reward)
         return reward
+
     def get_intrinsic_reward(self, note_location_before_action, note_location_after_action):
         # likeliest_action = np.argmax(self.entropy_matrix[note_location_before_action,:])
         # highest_prob = self.entropy_matrix[note_location_before_action][likeliest_action]
         # action_prob = self.entropy_matrix[note_location_before_action][note_location_after_action]
         # reward = action_prob / highest_prob
 
-        reward = get_Shannon_entropy_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
+        reward = get_Shannon_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
         # reward = get_Beta_entropy_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
         # reward = get_Shannon_KL_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
         # reward = get_Dirichlet_KL_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
