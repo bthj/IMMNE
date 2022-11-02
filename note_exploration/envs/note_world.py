@@ -4,7 +4,13 @@ from gym.utils.renderer import Renderer
 import pygame
 import numpy as np
 import math
-from midi_ar import get_note_transition_matrix_prob_and_entropy
+from midi_ar import (
+    get_note_transition_matrix_prob_and_entropy,
+    get_Shannon_entropy_and_update,
+    get_Beta_entropy_and_update,
+    get_Shannon_KL_and_update,
+    get_Dirichlet_KL_and_update
+)
 
 # based on https://www.gymlibrary.dev/content/environment_creation/
 
@@ -190,10 +196,16 @@ class NoteWorldEnv(gym.Env):
         print("extrinsic reward", reward)
         return reward
     def get_intrinsic_reward(self, note_location_before_action, note_location_after_action):
-        likeliest_action = np.argmax(self.entropy_matrix[note_location_before_action,:])
-        highest_prob = self.entropy_matrix[note_location_before_action][likeliest_action]
-        action_prob = self.entropy_matrix[note_location_before_action][note_location_after_action]
-        reward = action_prob / highest_prob
+        # likeliest_action = np.argmax(self.entropy_matrix[note_location_before_action,:])
+        # highest_prob = self.entropy_matrix[note_location_before_action][likeliest_action]
+        # action_prob = self.entropy_matrix[note_location_before_action][note_location_after_action]
+        # reward = action_prob / highest_prob
+
+        reward = get_Shannon_entropy_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
+        # reward = get_Beta_entropy_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
+        # reward = get_Shannon_KL_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
+        # reward = get_Dirichlet_KL_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
+
         print("intrinsic reward", reward)
         return reward
 

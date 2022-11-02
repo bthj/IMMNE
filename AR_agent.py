@@ -5,7 +5,7 @@ import note_exploration
 from midi_tm import *
 
 # create note exploration environment
-env = gym.make('note_exploration/NoteWorld-v0', size=128, reward_mode="extrinsic")
+env = gym.make('note_exploration/NoteWorld-v0', size=128, reward_mode="intrinsic")
 
 random_q_table = False
 
