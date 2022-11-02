@@ -5,7 +5,7 @@ import note_exploration
 from midi_tm import *
 
 # create note exploration environment
-env = gym.make('note_exploration/NoteWorld-v0', size=128, reward_mode="intrinsic")
+env = gym.make('note_exploration/NoteWorld-v0', size=128, reward_mode="oscillate")
 
 random_q_table = False
 
@@ -14,14 +14,17 @@ state_size = env.size
 action_size = env.get_action_size()
 
 # hyperparameters
-learning_rate = 0.9
-discount_rate = 0.8
+# learning_rate = 0.9
+# discount_rate = 0.8
+learning_rate = 0.3
+discount_rate = 0.2
 epsilon = 1.0
-decay_rate= 0.005
+# decay_rate= 0.005
+decay_rate= 0.001
 
 # training variables
-num_episodes = 1000
-max_steps = 99 # per episode
+num_episodes = 10000
+max_steps = 990 # per episode
 
 if random_q_table: # just fill the q-table with random values
 
@@ -32,6 +35,9 @@ else: # perform some training
     qtable = np.zeros((state_size, action_size))
 
     for episode in range(num_episodes):
+
+        if episode % 100 == 0:
+            print("episode", episode)
 
         # reset the environment
         state = env.reset()
@@ -44,22 +50,22 @@ else: # perform some training
             if random.uniform(0,1) < epsilon:
                 # explore
                 action = round(env.action_space.sample()[0])
-                print("exploration action", action)
+                # print("exploration action", action)
             else:
                 # exploit
                 action = np.argmax(qtable[note_observation,:])
-                print("exploit action", action)
+                # print("exploit action", action)
 
             # take action and observe reward
             new_state, reward, done, info = env.step(action)
             new_note_observation = new_state['note'][0]
 
-            print("new_state, reward, info", new_state, reward, info)
+            # print("new_state, reward, info", new_state, reward, info)
 
             # Q-learning algorithm
             qtable[note_observation,action] = qtable[note_observation,action] + learning_rate * (reward + discount_rate * np.max(qtable[new_note_observation,:])-qtable[note_observation,action])
 
-            print("qtable", qtable)
+            # print("qtable", qtable)
 
             # Update to our new state
             state = new_state

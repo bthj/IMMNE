@@ -30,6 +30,7 @@ class NoteWorldEnv(gym.Env):
     def __init__(
             self, render_mode=None,
             reward_mode="extrinsic",
+            oscillation_cycle_period=1000,
             exp_decay_const=1,
             size=12 # 12 notes in an octave
     ):
@@ -54,7 +55,6 @@ class NoteWorldEnv(gym.Env):
         # Loading / Generating Data
 
         # "ar" is the transition matrix as an autoregressive model
-        # "par" contains transition probabilities
         # "har" represents entropy
         ar, har = get_note_transition_matrix_prob_and_entropy()
 
@@ -73,6 +73,7 @@ class NoteWorldEnv(gym.Env):
         assert reward_mode in self.metadata["reward_modes"]
         self.reward_mode = reward_mode
 
+        self.oscillation_cycle_period = oscillation_cycle_period
         self.exp_decay_const = exp_decay_const
 
         self.set_render_mode(render_mode)
@@ -161,7 +162,11 @@ class NoteWorldEnv(gym.Env):
             case "intrinsic": # calculate reward from intrinsic motivation
                 reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
             case "oscillate":
-                reward = extrinsic_reward * Math.cos(self.step_iteration)**2 + intrinsic_reward * Math.sin(self.step_iteration)**2
+                extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
+                intrinsic_reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
+
+                t = 2*math.pi * self.step_iteration / self.oscillation_cycle_period
+                reward = extrinsic_reward * math.cos(t)**2 + intrinsic_reward * math.sin(t)**2
                 print("oscillating reward", reward)
             case "extr_to_intr_exp_decay":
                 extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
@@ -191,6 +196,8 @@ class NoteWorldEnv(gym.Env):
         rcur = R[note_location_before_action, note_location_after_action]
         rden = R[note_location_before_action]
         reward = (rcur+1e-5) / (rden+1e-5).sum()
+        # scaling to match the scale of intrinsic rewards (some of which are also scaled)
+        reward = 10000 * reward
 
         '''Not sure exactly what is going on here...?'''
         # likeliest_action = np.argmax(self.extrinsic_probability_matrix[note_location_before_action,:])
@@ -206,11 +213,12 @@ class NoteWorldEnv(gym.Env):
         # action_prob = self.entropy_matrix[note_location_before_action][note_location_after_action]
         # reward = action_prob / highest_prob
 
-        reward = get_Shannon_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
-        # reward = get_Beta_entropy_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
-        # reward = get_Shannon_KL_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
-        # reward = get_Dirichlet_KL_and_update(note_location_before_action, note_location_after_action, self.entropy_matrix)
+        # reward = get_Shannon_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
+        # reward = get_Beta_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
+        reward = 1000000 * get_Shannon_KL_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
+        # reward = get_Dirichlet_KL_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
 
+        reward = abs(reward)
         print("intrinsic reward", reward)
         return reward
 

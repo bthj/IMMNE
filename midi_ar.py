@@ -198,7 +198,6 @@ def get_Dirichlet_KL_and_update(prev_state, new_state, cur_har):
 
 # returns:
 # -- 1-step transition matrix as an autoregressive model
-# -- transition probabilities
 # -- entropy
 def get_note_transition_matrix_prob_and_entropy():
     song_dicts = get_song_dicts()
