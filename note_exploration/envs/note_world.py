@@ -61,6 +61,14 @@ class NoteWorldEnv(gym.Env):
         self.extrinsic_matrix = ar
         self.intrinsic_matrix = har
 
+        dampen_extrinsic_matrix = True
+        if dampen_extrinsic_matrix:
+            tmpmeans = self.extrinsic_matrix.mean(1)
+            tmpidx = np.where(np.eye(128) > 0.1)
+            self.extrinsic_matrix[tmpidx] = (
+                0.25 * self.extrinsic_matrix[tmpidx] +
+                0.75 * tmpmeans
+            )
 
         assert reward_mode in self.metadata["reward_modes"]
         self.reward_mode = reward_mode
