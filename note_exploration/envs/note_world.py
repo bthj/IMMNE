@@ -1,7 +1,6 @@
 import gym
 from gym import spaces
 from gym.utils.renderer import Renderer
-import pygame
 import numpy as np
 import math
 from midi_ar import (
@@ -23,7 +22,7 @@ class NoteWorldEnv(gym.Env):
             "extr_to_intr_exp_decay", # decay from one source of reward to the other
             "intr_to_extr_exp_decay" # -- exponentially (what decay constant? -configurable?)
         ],
-        "render_modes": ["human", "rgb_array", "single_rgb_array"],
+        "render_modes": ["human", "rgb_array", "single_rgb_array", "text"],
         "render_fps": 4
     }
 
@@ -117,7 +116,8 @@ class NoteWorldEnv(gym.Env):
     def set_render_mode(self, render_mode=None):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
-        self._renderer = Renderer(self.render_mode, self._render_frame)
+        if self.render_mode != "text":
+            self._renderer = Renderer(self.render_mode, self._render_frame)
 
     def reset(self, seed=None, return_info=False, options=None):
         # We need the following line to seed self.np_random
@@ -132,8 +132,9 @@ class NoteWorldEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        self._renderer.reset()
-        self._renderer.render_step()
+        if self.render_mode != "text":
+            self._renderer.reset()
+            self._renderer.render_step()
 
         self.step_iteration = 0
 
@@ -156,27 +157,26 @@ class NoteWorldEnv(gym.Env):
         # reward as prob. of performed action as percentage highest prob.
         # TODO: binary sparse rewards instead?
         # -- or rewards according to note-distance between action taken and the "optimal" one?
-        match self.reward_mode:
-            case "extrinsic": # calculate reward from extrinsic motivation
-                reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
-            case "intrinsic": # calculate reward from intrinsic motivation
-                reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
-            case "oscillate":
-                extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
-                intrinsic_reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
+        if "extrinsic" == self.reward_mode:
+            reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
+        elif "intrinsic" == self.reward_mode:
+            reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
+        elif "oscillate":
+            extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
+            intrinsic_reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
 
-                t = 2*math.pi * self.step_iteration / self.oscillation_cycle_period
-                reward = extrinsic_reward * math.cos(t)**2 + intrinsic_reward * math.sin(t)**2
-                print("oscillating reward", reward)
-            case "extr_to_intr_exp_decay":
-                extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
-                intrinsic_reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
+            t = 2*math.pi * self.step_iteration / self.oscillation_cycle_period
+            reward = extrinsic_reward * math.cos(t)**2 + intrinsic_reward * math.sin(t)**2
+            print("oscillating reward", reward)
+        elif "extr_to_intr_exp_decay":
+            extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
+            intrinsic_reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
 
-                # TODO
+            # TODO
 
-                reward = 0
-            case _:
-                reward = 0
+            reward = 0
+        else:
+            reward = 0
 
         self._agent_location = agent_location_after_action
 
@@ -187,7 +187,8 @@ class NoteWorldEnv(gym.Env):
 
         self.step_iteration += 1
 
-        self._renderer.render_step()
+        if self.render_mode != "text":
+            self._renderer.render_step()
 
         return observation, reward, done, info
 
@@ -222,12 +223,17 @@ class NoteWorldEnv(gym.Env):
         print("intrinsic reward", reward)
         return reward
 
-    def render(self):
-        return self._renderer.get_renders()
+    def render(self, mode='human', action=0, reward=0 ):
+        if "text" == mode:
+            # print(f"action={action} reward = {reward}") 
+            print("render action={action} reward = {reward}") 
+        else:
+            return self._renderer.get_renders()
 
     # TODO replace with a musical keyboard
     # TODO play the action-notes (with https://www.pygame.org/docs/ref/music.html or music21 ?)
     def _render_frame(self, mode):
+        import pygame
         assert mode is not None
 
         pix_square_size = (
@@ -287,6 +293,7 @@ class NoteWorldEnv(gym.Env):
             )
 
     def close(self):
-        if self.window is not None:
+        if self.window is not None and self.render_mode != "text":
+            import pygame
             pygame.display.quit()
             pygame.quit()
