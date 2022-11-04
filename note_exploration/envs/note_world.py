@@ -37,7 +37,7 @@ class NoteWorldEnv(gym.Env):
             self, render_mode=None,
             reward_mode="extrinsic",
             intrinsic_reward_algorithm="Dirichlet_KL",
-            oscillation_cycle_period=500,
+            oscillation_cycle_period=1000,
             exp_decay_const=1,
             size=12 # 12 notes in an octave
     ):
@@ -68,6 +68,8 @@ class NoteWorldEnv(gym.Env):
 
         self.extrinsic_matrix = ar
         self.intrinsic_matrix = har
+
+        self.reward_history = []
 
         dampen_extrinsic_matrix = True
         if dampen_extrinsic_matrix:
@@ -150,6 +152,8 @@ class NoteWorldEnv(gym.Env):
 
         self.step_iteration = 0
 
+        self.reward_history = []
+
         return (observation, info) if return_info else observation
 
     def step(self, action):
@@ -181,7 +185,7 @@ class NoteWorldEnv(gym.Env):
 
             t = 2*math.pi * self.step_iteration / self.oscillation_cycle_period
             reward = extrinsic_reward * math.cos(t)**2 + intrinsic_reward * math.sin(t)**2
-            print("oscillating reward", reward)
+            # print("oscillating reward", reward)
         elif "extr_to_intr_exp_decay":
             extrinsic_reward = self.get_extrinsic_reward(note_location_before_action, note_location_after_action)
             intrinsic_reward = self.get_intrinsic_reward(note_location_before_action, note_location_after_action)
@@ -191,6 +195,15 @@ class NoteWorldEnv(gym.Env):
             reward = 0
         else:
             reward = 0
+
+        
+        # difference to mean 
+        # self.reward_history.append(reward)
+        # reward = np.array(self.reward_history).mean() - reward
+        # or
+        # mu = np.array(self.reward_history).mean()
+        # std = np.array(self.reward_history).std(ddof=1)
+        # reward = (mu - reward) / std
 
         self._agent_location = agent_location_after_action
 
@@ -246,7 +259,7 @@ class NoteWorldEnv(gym.Env):
         # reward = get_Beta_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
         
         reward = abs(reward)
-        print("intrinsic reward", reward)
+        # print("intrinsic reward", reward)
         return reward
 
     def num_to_range(self, num, inMin, inMax, outMin, outMax):
