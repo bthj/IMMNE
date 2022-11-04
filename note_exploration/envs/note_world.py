@@ -13,6 +13,8 @@ from midi_ar import (
 
 # based on https://www.gymlibrary.dev/content/environment_creation/
 
+REWARD_CEILING = 100
+
 class NoteWorldEnv(gym.Env):
     metadata = {
         "reward_modes": [
@@ -22,6 +24,11 @@ class NoteWorldEnv(gym.Env):
             "extr_to_intr_exp_decay", # decay from one source of reward to the other
             "intr_to_extr_exp_decay" # -- exponentially (what decay constant? -configurable?)
         ],
+        "intrinsic_reward_algorithms": [
+            "Shannon_entropy",
+            "Shannon_KL",
+            "Dirichlet_KL"
+        ],
         "render_modes": ["human", "rgb_array", "single_rgb_array", "text"],
         "render_fps": 4
     }
@@ -29,7 +36,8 @@ class NoteWorldEnv(gym.Env):
     def __init__(
             self, render_mode=None,
             reward_mode="extrinsic",
-            oscillation_cycle_period=1000,
+            intrinsic_reward_algorithm="Dirichlet_KL",
+            oscillation_cycle_period=500,
             exp_decay_const=1,
             size=12 # 12 notes in an octave
     ):
@@ -71,6 +79,9 @@ class NoteWorldEnv(gym.Env):
 
         assert reward_mode in self.metadata["reward_modes"]
         self.reward_mode = reward_mode
+
+        assert intrinsic_reward_algorithm in self.metadata["intrinsic_reward_algorithms"]
+        self.intrinsic_reward_algorithm = intrinsic_reward_algorithm
 
         self.oscillation_cycle_period = oscillation_cycle_period
         self.exp_decay_const = exp_decay_const
@@ -198,30 +209,45 @@ class NoteWorldEnv(gym.Env):
         rden = R[note_location_before_action]
         reward = (rcur+1e-5) / (rden+1e-5).sum()
         # scaling to match the scale of intrinsic rewards (some of which are also scaled)
-        reward = 10000 * reward
+        # reward = reward
+        reward = self.num_to_range(
+            reward,
+            0, 0.0727, # measured max reward
+            0, REWARD_CEILING # range to map to
+        )
 
-        '''Not sure exactly what is going on here...?'''
-        # likeliest_action = np.argmax(self.extrinsic_probability_matrix[note_location_before_action,:])
-        # highest_prob = self.extrinsic_probability_matrix[note_location_before_action][likeliest_action]
-        # action_prob = self.extrinsic_probability_matrix[note_location_before_action][note_location_after_action]
-        # reward = action_prob / highest_prob
-        print("extrinsic reward", reward)
         return reward
 
     def get_intrinsic_reward(self, note_location_before_action, note_location_after_action):
-        # likeliest_action = np.argmax(self.entropy_matrix[note_location_before_action,:])
-        # highest_prob = self.entropy_matrix[note_location_before_action][likeliest_action]
-        # action_prob = self.entropy_matrix[note_location_before_action][note_location_after_action]
-        # reward = action_prob / highest_prob
-
-        # reward = get_Shannon_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
+        if "Shannon_entropy" == self.intrinsic_reward_algorithm:
+            reward = self.num_to_range(
+                get_Shannon_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix),
+                0, 0.5307, # measured max reward
+                0, REWARD_CEILING # range to map to
+            )
+        elif "Shannon_KL" == self.intrinsic_reward_algorithm:
+            reward = self.num_to_range(
+                get_Shannon_KL_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix),
+                0, 0.0142, # measured max reward
+                0, REWARD_CEILING # range to map to
+            )
+        elif "Dirichlet_KL" == self.intrinsic_reward_algorithm:
+            # observed maximums ranging from ~761 to ~789
+            reward = self.num_to_range(
+                get_Dirichlet_KL_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix),
+                0, 800, # measured max reward
+                0, REWARD_CEILING # range to map to
+            )
+        
+        # TODO: Beta_entropy is wonky: always returns exactly the reward: 4.06440323075953 (and takes a long time to run)
         # reward = get_Beta_entropy_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
-        reward = 1000000 * get_Shannon_KL_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
-        # reward = get_Dirichlet_KL_and_update(note_location_before_action, note_location_after_action, self.intrinsic_matrix)
-
+        
         reward = abs(reward)
         print("intrinsic reward", reward)
         return reward
+
+    def num_to_range(self, num, inMin, inMax, outMin, outMax):
+        return outMin + (float(num - inMin) / float(inMax - inMin) * (outMax - outMin))
 
     def render(self, mode='human', action=0, reward=0 ):
         if "text" == mode:
