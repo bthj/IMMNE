@@ -56,7 +56,8 @@ class NoteWorldEnv(gym.Env):
         # -- corresponding to either one ocatave down or up
         # -- to be later discretised to the nearest note position (in step())
         # TODO: multi-dimensional, for e.g. velocities and durations?
-        self.action_space = spaces.Box(0, 24, (1,), dtype=np.float32)
+        # self.action_space = spaces.Box(0, 24, (1,), dtype=np.float32)
+        self.action_space = spaces.Box(0, size - 1, (1,), dtype=np.float32)
 
 
         # Loading / Generating Data
@@ -119,6 +120,7 @@ class NoteWorldEnv(gym.Env):
         actions from the range self.action_space.low to self.action_space.high
         """
         action_size = self.get_action_size()
+        print("action_size", action_size)
         return round(action - (action_size/2))
 
     def get_action_size(self):
@@ -137,7 +139,6 @@ class NoteWorldEnv(gym.Env):
         # Choose the agent's location uniformly at random
         self._agent_location = self.np_random.integers(0, self.size, size=1, dtype=int)
 
-        print("---self._agent_location",self._agent_location)
         print("self._agent_location after reset", self._agent_location)
 
         observation = self._get_obs()
@@ -153,13 +154,15 @@ class NoteWorldEnv(gym.Env):
 
     def step(self, action):
 
-        note_delta = self._action_to_note_delta(action)
-
-        print("note_delta",note_delta)
+        # scrapping the note delta thing for now ...which is in any case implemented in a weird way...
+        # note_delta = self._action_to_note_delta(action)
+        # print("note_delta",note_delta)
 
         # We use `np.clip` to make sure we don't leave the grid (note pos. array)
         agent_location_after_action = np.clip(
-            self._agent_location + note_delta, 0, self.size - 1
+            # scrapping the note delta thing for now ...which is in any case implemented in a weird way...
+            # self._agent_location + note_delta, 0, self.size - 1
+            [action], 0, self.size - 1
         )
 
         likeliest_action = 0
@@ -251,8 +254,7 @@ class NoteWorldEnv(gym.Env):
 
     def render(self, mode='human', action=0, reward=0 ):
         if "text" == mode:
-            # print(f"action={action} reward = {reward}") 
-            print("render action={action} reward = {reward}") 
+            print(f"action={action} reward = {reward}") 
         else:
             return self._renderer.get_renders()
 
